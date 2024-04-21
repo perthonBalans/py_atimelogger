@@ -1,0 +1,17 @@
+{
+    "intervals": "get",
+    "types": [
+        "get", 
+        "post", 
+        {"put": ["/guid"]}, 
+        {"delete": ["/guid"]}
+    ],
+    "statistics": "post",
+    "activities": [
+        {
+            "get": {"state": ["running"]}
+        },
+        "post"
+    ],
+    "goals": "get"
+}
