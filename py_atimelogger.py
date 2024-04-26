@@ -57,7 +57,7 @@ def timestamp_helper(
     Returns:
         A tuple containing 2 elements:
             datetime: The converted datetime with timezone.
-            Callable[[_SupportsFloatOrIndex], datetime]: The converter function to convert timestamps to datetime.
+            Callable[[float], datetime]: The converter function to convert timestamps to datetime.
 
     Raises:
         TypeError: If `tz` is None.
