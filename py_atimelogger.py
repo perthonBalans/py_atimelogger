@@ -235,21 +235,22 @@ class aTimeLogger:
 
         if 400 <= response.status_code < 600:
             request_info = f"{response.request.method} {response.request.url}"
+            text = response.text
             try:
                 title = re.search(
                     r"<title>(.*)</title>", 
-                    response.text, 
+                    text, 
                     re.IGNORECASE
                 ).group(1)
                 reasons_match = re.search(
                     r"<p><b>Message<\/b> (.*?)<\/p>", 
-                    response.text, 
+                    text, 
                     re.IGNORECASE
                 )
                 reasons = html.unescape(reasons_match.group(1)) if reasons_match else ''
                 details_match = re.search(
                     r"<p><b>Description<\/b> (.*?)<\/p>", 
-                    response.text, 
+                    text, 
                     re.IGNORECASE
                 )
                 details = html.unescape(details_match.group(1)) if details_match else ''
@@ -264,7 +265,7 @@ class aTimeLogger:
                     json = response.json()
                     error_msg = f"{response.status_code} {error_type}: for {request_info}.\n{json}"
                 except requests.exceptions.JSONDecodeError:
-                    error_msg = f"{response.status_code} {error_type}: for {request_info}.\n{response.text}"
+                    error_msg = f"{response.status_code} {error_type}: for {request_info}.\n{text}"
 
             raise requests.HTTPError(error_msg, response=response)
 
