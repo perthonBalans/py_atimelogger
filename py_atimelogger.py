@@ -1,6 +1,7 @@
 import re
 import html
 from datetime import datetime, tzinfo
+from warnings import warn
 from typing import (
     Any,
     SupportsInt,
@@ -45,26 +46,20 @@ def prepare_timestamp(time: str | datetime | SupportsInt) -> int:
 
 def timestamp_helper(
     dt: datetime | str,
-    tz: tzinfo
+    tz: Optional[tzinfo] = None
 ) -> tuple[datetime, Callable[[float], datetime]]:
     """
     Convert the given datetime to a datetime with timezone and a converter function.
 
     Args:
         dt (datetime | str): The datetime to convert.
-        tz (tzinfo): The timezone to use.
+        tz (tzinfo, optional): The timezone to use. Defaults to None, resulting in local timezone.
 
     Returns:
         A tuple containing 2 elements:
             datetime: The converted datetime with timezone.
-            Callable[[_SupportsFloatOrIndex], datetime]: The converter function to convert timestamps to datetime.
-
-    Raises:
-        TypeError: If `tz` is None.
+            Callable[[float], datetime]: The converter function to convert timestamps to datetime.
     """
-
-    if tz is None:
-        raise TypeError("tz must be a tzinfo object.")
     if isinstance(dt, str):
         dt = datetime.fromisoformat(dt)
     dt = dt.replace(tzinfo=tz)
@@ -96,8 +91,7 @@ class aTimeLogger:
     The datetime without time zone is assumed to be in local time zone.
     The time-limited step is `curl_request`.
     """
-
-    REQUEST_MAX = 0x7FFF_FFFF
+    LIMIT_MAX = 0x7FFF_FFFF
     MODELS = (
         'intervals',
         'types',
@@ -146,7 +140,7 @@ class aTimeLogger:
         self,
         offset: int = 0,
         limit: int = 100,
-        order: str = 'asc',
+        order: str = 'desc',
         datetime_range: tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]] = (None, None),
         types: Optional[Iterable[str]] = None,
         state: Optional[str] = None,
@@ -158,8 +152,8 @@ class aTimeLogger:
         Args:
             offset (int): The offset value for pagination. Defaults to 0.
             limit (int): The limit value for pagination. Defaults to 100.
-            order (str): The order of the results. Defaults to 'asc'.
-            datetime_range (tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]]): \
+            order (str): The order of the results. Defaults to 'desc'.
+            datetime_range (tuple[str | datetime | SupportsInt | None, str | datetime | SupportsInt | None]): \
                 The datetime range in which intervals are included. None means no limit. Default is (None, None).
             types (Iterable[str], optional): The type guids of the intervals to retrieve. Default is None, meaning all types.
             state (str, optional): The state of the activities to include. Defaults to None, meaning all states.
@@ -168,7 +162,6 @@ class aTimeLogger:
         Returns:
             dict: The prepared parameters for the API request.
         """
-
         dt_lower_bound, dt_upper_bound = datetime_range
 
         params = {
@@ -211,7 +204,6 @@ class aTimeLogger:
         Returns:
             requests.Response: The response object from the request.
         """
-
         url = f"{self.ENDPOINT}/{model}/{guid}"
         response = self.session.request(
             method, 
@@ -232,7 +224,6 @@ class aTimeLogger:
         Raises:
             `HTTPError`: If the response status code indicates an error.
         """
-
         if 400 <= response.status_code < 600:
             request_info = f"{response.request.method} {response.request.url}"
             text = response.text
@@ -269,10 +260,42 @@ class aTimeLogger:
 
             raise requests.HTTPError(error_msg, response=response)
 
+    def _object_hook(self, dct: dict, tz: Optional[tzinfo] = None) -> dict:
+        if ('' in dct) and not dct['']:
+            del dct['']
+        if 'from' in dct:
+            dct['from'] = datetime.fromtimestamp(dct['from'], tz)
+        if 'to' in dct:
+            dct['to'] = datetime.fromtimestamp(dct['to'], tz)
+        if ('comment' in dct) and dct['comment'] == '':
+            dct['comment'] = None
+        return dct   
+
+    def decode_response(
+        self,
+        response: requests.Response,
+        tz: Optional[tzinfo] = None,
+        **kwargs,
+    ) -> dict[str, Any]:
+        """
+        Decode the response from the API and return it as a dictionary.
+        
+        Args:
+            response (requests.Response): The response object from the API.
+            tz (tzinfo, optional): Optional timezone information for datetime conversion.
+            **kwargs: Additional keyword arguments that `json.loads` takes.
+        
+        Returns:
+            dict[str, Any]: The decoded response as a dictionary.
+        """
+        _object_hook: Callable[[dict[str, Any]], Any] = kwargs.pop('object_hook', None) or (lambda dct: self._object_hook(dct, tz))
+            
+        return response.json(object_hook=_object_hook, **kwargs)
+
     def get_types(
         self,
         guid: str = '',
-        order: str = 'asc',
+        order: str = 'desc',
         **kwargs,
     ) -> dict[str, Records | bool]:
         """
@@ -280,7 +303,7 @@ class aTimeLogger:
 
         Args:
             guid (str): The GUID of the type to retrieve. Default is ''.
-            order (str): The order in which the types should be sorted. Default is 'asc'.
+            order (str): The order in which the types should be sorted. Default is 'desc'.
             **kwargs: Additional keyword arguments for the request.
 
         Returns:
@@ -302,14 +325,14 @@ class aTimeLogger:
             **kwargs
         )
         self.check_response(response)
-        return response.json()
+        return self.decode_response(response)
 
     def get_activities(
         self,
         offset: int = 0,
-        limit: int = REQUEST_MAX,
+        limit: int = LIMIT_MAX,
         state: Optional[str] = None,
-        order: str = 'asc',
+        order: str = 'desc',
         **kwargs,
     ) -> dict[str, Records | dict[str, str | int] | list[str] | int]:
         """
@@ -318,9 +341,9 @@ class aTimeLogger:
         Args:
             offset (int): The offset for pagination. Default is 0.
             limit (int): The maximum number of activities to retrieve.\
-                  Default is 2147483647:=0x7FFF_FFFF (`REQUEST_MAX`).
+                  Default is 2147483647:=0x7FFF_FFFF (`LIMIT_MAX`).
             state (str, optional): The state of the activities to retrieve. Default is None.
-            order (str): The order in which the activities should be sorted. Default is 'asc'.
+            order (str): The order in which the activities should be sorted. Default is 'desc'.
             **kwargs: Additional keyword arguments for the request.
 
         Returns:
@@ -347,15 +370,39 @@ class aTimeLogger:
             **kwargs
         )
         self.check_response(response)
-        return response.json()
+        return self.decode_response(response)
+
+    def _extract_tzinfo_4decode(
+        self,
+        datetime_range: tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]]
+    ) -> tzinfo | None:
+        dt_lower_bound, dt_upper_bound = datetime_range
+        if isinstance(dt_lower_bound, str):
+            tz1 = datetime.fromisoformat(dt_lower_bound).tzinfo
+        elif isinstance(dt_lower_bound, datetime):
+            tz1 = dt_lower_bound.tzinfo
+        else:
+            tz1 = None
+        if isinstance(dt_upper_bound, str):
+            tz2 = datetime.fromisoformat(dt_upper_bound).tzinfo
+        elif isinstance(dt_upper_bound, datetime):
+            tz2 = dt_upper_bound.tzinfo
+        else:
+            tz2 = None
+        if tz1 and tz2:
+            if tz1 != tz2:
+                warn("The timezones of the datetime range are different. Using the timezone of the lower bound.")
+            return tz1
+        else:
+            return tz1 or tz2
 
     def get_intervals(
         self,
         offset: int = 0,
-        limit: int = REQUEST_MAX,
+        limit: int = LIMIT_MAX,
         datetime_range: tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]] = (None, None),
         types: Optional[Iterable[str]] = None,
-        order: str = 'asc',
+        order: str = 'desc',
         **kwargs,
     ) -> dict[str, Records | dict[str, int]]:
         """
@@ -364,11 +411,11 @@ class aTimeLogger:
         Args:
             offset (int): The offset for pagination. Default is 0.
             limit (int): The maximum number of intervals to retrieve.\
-                  Default is 2147483647:=0x7FFF_FFFF (`REQUEST_MAX`).
-            datetime_range (tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]]): \
+                  Default is 2147483647:=0x7FFF_FFFF (`LIMIT_MAX`).
+            datetime_range (tuple[str | datetime | SupportsInt | None, str | datetime | SupportsInt | None]): \
                 The datetime range in which intervals are included. None means no limit. Default is (None, None).
             types (Iterable[str], optional): The type guids of the intervals to retrieve. Default is None.
-            order (str): The order in which the intervals should be sorted. Default is 'asc'.
+            order (str): The order in which the intervals should be sorted. Default is 'desc'.
             **kwargs: Additional keyword arguments for the request.
 
         Returns:
@@ -393,16 +440,14 @@ class aTimeLogger:
             **kwargs
         )
         self.check_response(response)
-        json = response.json()
-        del json['']
-        return json
+        return self.decode_response(response, tz=self._extract_tzinfo_4decode(datetime_range))
 
 
 def get_types(
     username: bytes | str,
     password: bytes | str,
     guid: str = '',
-    order: str = 'asc',
+    order: str = 'desc',
     **kwargs,
 ) -> dict[str, Records | bool]:
     """
@@ -412,7 +457,7 @@ def get_types(
         username (bytes | str): The username of aTimeLogger account.
         password (bytes | str): The password of aTimeLogger account.
         guid (str): The GUID of the type to retrieve. Default is an empty string.
-        order (str): The order in which the types should be sorted. Default is 'asc'.
+        order (str): The order in which the types should be sorted. Default is 'desc'.
         **kwargs: Additional keyword arguments for the request.
 
     Returns:
@@ -431,9 +476,9 @@ def get_activities(
     username: bytes | str,
     password: bytes | str,
     offset: int = 0,
-    limit: int = aTimeLogger.REQUEST_MAX,
+    limit: int = aTimeLogger.LIMIT_MAX,
     state: Optional[str] = None,
-    order: str = 'asc',
+    order: str = 'desc',
     **kwargs,
 ) -> dict[str, Records | dict[str, str | int] | list[str] | int]:
     """
@@ -444,9 +489,9 @@ def get_activities(
         password (bytes | str): The password of aTimeLogger account.
         offset (int): The offset for pagination. Default is 0.
         limit (int): The maximum number of activities to retrieve.\
-              Default is 2147483647:=0x7FFF_FFFF (`REQUEST_MAX`).
+              Default is 2147483647:=0x7FFF_FFFF (`LIMIT_MAX`).
         state (str, optional): The state of the activities to retrieve. Default is None.
-        order (str): The order in which the activities should be sorted. Default is 'asc'.
+        order (str): The order in which the activities should be sorted. Default is 'desc'.
         **kwargs: Additional keyword arguments for the request.
 
     Returns:
@@ -468,10 +513,10 @@ def get_intervals(
     username: bytes | str,
     password: bytes | str,
     offset: int = 0,
-    limit: int = aTimeLogger.REQUEST_MAX,
+    limit: int = aTimeLogger.LIMIT_MAX,
     datetime_range: tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]] = (None, None),
     types: Optional[Iterable[str]] = None,
-    order: str = 'asc',
+    order: str = 'desc',
     **kwargs,
 ) -> dict[str, Records | dict[str, int]]:
     """
@@ -482,11 +527,11 @@ def get_intervals(
         password (bytes | str): The password of aTimeLogger account.
         offset (int): The offset for pagination. Default is 0.
         limit (int): The maximum number of intervals to retrieve.\
-              Default is 2147483647:=0x7FFF_FFFF (`REQUEST_MAX`).
-        datetime_range (tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]]): \
+              Default is 2147483647:=0x7FFF_FFFF (`LIMIT_MAX`).
+        datetime_range (tuple[str | datetime | SupportsInt | None, str | datetime | SupportsInt | None]): \
             The datetime range in which intervals are included. None means no limit. Default is (None, None).
         types (Iterable[str], optional): The type guids of the intervals to retrieve. Default is None.
-        order (str): The order in which the intervals should be sorted. Default is 'asc'.
+        order (str): The order in which the intervals should be sorted. Default is 'desc'.
         **kwargs: Additional keyword arguments for the request.
 
     Returns:
