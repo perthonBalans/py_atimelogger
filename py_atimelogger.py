@@ -57,7 +57,7 @@ def timestamp_helper(
     Returns:
         A tuple containing 2 elements:
             datetime: The converted datetime with timezone.
-            Callable[[float], datetime]: The converter function to convert timestamps to datetime.
+            Callable[[_SupportsFloatOrIndex], datetime]: The converter function to convert timestamps to datetime.
 
     Raises:
         TypeError: If `tz` is None.
@@ -241,16 +241,18 @@ class aTimeLogger:
                     response.text, 
                     re.IGNORECASE
                 ).group(1)
-                reasons = html.unescape(re.search(
+                reasons_match = re.search(
                     r"<p><b>Message<\/b> (.*?)<\/p>", 
                     response.text, 
                     re.IGNORECASE
-                ).group(1))
-                details = html.unescape(re.search(
+                )
+                reasons = html.unescape(reasons_match.group(1)) if reasons_match else ''
+                details_match = re.search(
                     r"<p><b>Description<\/b> (.*?)<\/p>", 
                     response.text, 
                     re.IGNORECASE
-                ).group(1))
+                )
+                details = html.unescape(details_match.group(1)) if details_match else ''
                 error_msg = f"{title}: {reasons} for {request_info}.\n{details}"
 
             except AttributeError:
