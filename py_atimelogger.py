@@ -260,7 +260,11 @@ class aTimeLogger:
                     error_type = "Client Error"
                 else:
                     error_type = "Server Error"
-                error_msg = f"{response.status_code} {error_type}: for {request_info}"
+                try:
+                    json = response.json()
+                    error_msg = f"{response.status_code} {error_type}: for {request_info}.\n{json}"
+                except requests.exceptions.JSONDecodeError:
+                    error_msg = f"{response.status_code} {error_type}: for {request_info}.\n{response.text}"
 
             raise requests.HTTPError(error_msg, response=response)
 
