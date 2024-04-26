@@ -261,8 +261,6 @@ class aTimeLogger:
             raise requests.HTTPError(error_msg, response=response)
 
     def _object_hook(self, dct: dict, tz: Optional[tzinfo] = None) -> dict:
-        if ('' in dct) and not dct['']:
-            del dct['']
         if 'from' in dct:
             dct['from'] = datetime.fromtimestamp(dct['from'], tz)
         if 'to' in dct:
@@ -274,7 +272,6 @@ class aTimeLogger:
     def decode_response(
         self,
         response: requests.Response,
-        tz: Optional[tzinfo] = None,
         **kwargs,
     ) -> dict[str, Any]:
         """
@@ -282,15 +279,15 @@ class aTimeLogger:
         
         Args:
             response (requests.Response): The response object from the API.
-            tz (tzinfo, optional): Optional timezone information for datetime conversion.
             **kwargs: Additional keyword arguments that `json.loads` takes.
         
         Returns:
             dict[str, Any]: The decoded response as a dictionary.
         """
-        _object_hook: Callable[[dict[str, Any]], Any] = kwargs.pop('object_hook', None) or (lambda dct: self._object_hook(dct, tz))
-            
-        return response.json(object_hook=_object_hook, **kwargs)
+        decoded_text = response.json(**kwargs)
+        if ('' in decoded_text) and not decoded_text['']:
+            del decoded_text['']
+        return decoded_text
 
     def get_types(
         self,
@@ -440,7 +437,10 @@ class aTimeLogger:
             **kwargs
         )
         self.check_response(response)
-        return self.decode_response(response, tz=self._extract_tzinfo_4decode(datetime_range))
+        return self.decode_response(
+            response,
+            object_hook=lambda dct: self._object_hook(dct, tz=self._extract_tzinfo_4decode(datetime_range))
+        )
 
 
 def get_types(
