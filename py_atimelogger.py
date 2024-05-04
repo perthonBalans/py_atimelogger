@@ -15,7 +15,7 @@ from typing import (
 import requests
 from requests.auth import HTTPBasicAuth
 
-Records: TypeAlias = list[dict[str, Any]]
+records: TypeAlias = dict[str, Any]
 
 
 def prepare_timestamp(time: str | datetime | SupportsInt) -> int:
@@ -267,7 +267,9 @@ class aTimeLogger:
             dct['to'] = datetime.fromtimestamp(dct['to'], tz)
         if ('comment' in dct) and dct['comment'] == '':
             dct['comment'] = None
-        return dct   
+        if 'type' in dct:
+            dct['typeGuid'] = dct.pop('type')['guid']
+        return dct
 
     def decode_response(
         self,
@@ -294,7 +296,7 @@ class aTimeLogger:
         guid: str = '',
         order: str = 'desc',
         **kwargs,
-    ) -> dict[str, Records | bool]:
+    ) -> dict[str, list[records] | bool]:
         """
         Retrieve a dict containing a list of types with optional filtering and pagination.
 
@@ -304,8 +306,8 @@ class aTimeLogger:
             **kwargs: Additional keyword arguments for the request.
 
         Returns:
-            dict[str, Records | bool]:
-                "types" (Records): A list of dictionaries (with string keys) representing the types.
+            dict[str, list[records] | bool]:
+                "types" (list[records]): A list of dictionaries (with string keys) representing the types.
                 "success" (bool): A boolean indicating the success of the porcess in server.
 
         Raises:
@@ -331,7 +333,7 @@ class aTimeLogger:
         state: Optional[str] = None,
         order: str = 'desc',
         **kwargs,
-    ) -> dict[str, Records | dict[str, str | int] | list[str] | int]:
+    ) -> dict[str, list[records] | dict[str, str | int] | list[str] | int]:
         """
         Retrieve a dict containing a list of activities with optional filtering and pagination.
 
@@ -344,9 +346,9 @@ class aTimeLogger:
             **kwargs: Additional keyword arguments for the request.
 
         Returns:
-            dict[str, Records | dict[str, str | int] | list[str] | int]:
-                "activities" (Records): A list of dictionaries (with string keys) representing the activities.
-                "types" (Records): A list of dictionaries (with string keys) representing the types.
+            dict[str, list[records] | dict[str, str | int] | list[str] | int]:
+                "activities" (list[records]): A list of dictionaries (with string keys) representing the activities.
+                "types" (list[records]): A list of dictionaries (with string keys) representing the types.
                 "account" (dict[str, str | int]): A dictionary representing the account.
                 "guid" (list[str]): A list of GUIDs.
                 "revision" (int): The revision number.
@@ -401,7 +403,7 @@ class aTimeLogger:
         types: Optional[Iterable[str]] = None,
         order: str = 'desc',
         **kwargs,
-    ) -> dict[str, Records | dict[str, int]]:
+    ) -> dict[str, list[records] | dict[str, int]]:
         """
         Retrieve a dict containing a list of intervals with optional filtering and pagination.
 
@@ -416,8 +418,8 @@ class aTimeLogger:
             **kwargs: Additional keyword arguments for the request.
 
         Returns:
-            dict[str, Records | dict[str, int]]:
-                "intervals" (Records): A list of dictionaries (with string keys) representing the intervals.
+            dict[str, list[records] | dict[str, int]]:
+                "intervals" (list[records]): A list of dictionaries (with string keys) representing the intervals.
                 "meta" (dict[str, int]): A dictionary representing the meta information.
 
         Raises:
@@ -449,7 +451,7 @@ def get_types(
     guid: str = '',
     order: str = 'desc',
     **kwargs,
-) -> dict[str, Records | bool]:
+) -> dict[str, list[records] | bool]:
     """
     Retrieve a dict containing a list of types with optional filtering and pagination.
 
@@ -461,8 +463,8 @@ def get_types(
         **kwargs: Additional keyword arguments for the request.
 
     Returns:
-        dict[str, Records | bool]:
-            "types" (Records): A list of dictionaries (with string keys) representing the types.
+        dict[str, list[records] | bool]:
+            "types" (list[records]): A list of dictionaries (with string keys) representing the types.
             "success" (bool): A boolean indicating the success of the porcess in server.
 
     Raises:
@@ -480,7 +482,7 @@ def get_activities(
     state: Optional[str] = None,
     order: str = 'desc',
     **kwargs,
-) -> dict[str, Records | dict[str, str | int] | list[str] | int]:
+) -> dict[str, list[records] | dict[str, str | int] | list[str] | int]:
     """
     Retrieve a dict containing a list of activities with optional filtering and pagination.
 
@@ -495,9 +497,9 @@ def get_activities(
         **kwargs: Additional keyword arguments for the request.
 
     Returns:
-        dict[str, Records | dict[str, str | int] | list[str] | int]:
-            "activities" (Records): A list of dictionaries (with string keys) representing the activities.
-            "types" (Records): A list of dictionaries (with string keys) representing the types.
+        dict[str, list[records] | dict[str, str | int] | list[str] | int]:
+            "activities" (list[records]): A list of dictionaries (with string keys) representing the activities.
+            "types" (list[records]): A list of dictionaries (with string keys) representing the types.
             "account" (dict[str, str | int]): A dictionary representing the account.
             "guid" (list[str]): A list of GUIDs.
             "revision" (int): The revision number.
@@ -518,7 +520,7 @@ def get_intervals(
     types: Optional[Iterable[str]] = None,
     order: str = 'desc',
     **kwargs,
-) -> dict[str, Records | dict[str, int]]:
+) -> dict[str, list[records] | dict[str, int]]:
     """
     Retrieve a dict containing a list of intervals with optional filtering and pagination.
 
@@ -535,8 +537,8 @@ def get_intervals(
         **kwargs: Additional keyword arguments for the request.
 
     Returns:
-        dict[str, Records | dict[str, int]]:
-            "intervals" (Records): A list of dictionaries (with string keys) representing the intervals.
+        dict[str, list[records] | dict[str, int]]:
+            "intervals" (list[records]): A list of dictionaries (with string keys) representing the intervals.
             "meta" (dict[str, int]): A dictionary representing the meta information.
 
     Raises:
