@@ -14,7 +14,6 @@ from typing import (
 )
 
 import requests
-from requests.auth import HTTPBasicAuth
 
 records: TypeAlias = dict[str, Any]
 
