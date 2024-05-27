@@ -22,7 +22,7 @@ The `aTimeLogger` class is a Python wrapper for the aTimeLogger REST-API, provid
 
 ### Requirements
 
-- Python 3.7+
+- Python 3.8+
 - `requests` library
 
 ### Class: `aTimeLogger`

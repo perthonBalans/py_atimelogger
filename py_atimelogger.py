@@ -110,9 +110,7 @@ class aTimeLogger:
         self._username = username
         self._password = password
         self.session = requests.Session()
-        self.session.auth = self.auth_header = HTTPBasicAuth(
-            self.username, self.password
-        )
+        self.session.auth = self.auth_header = self.username, self.password
 
     @property
     def username(self):
@@ -225,9 +223,10 @@ class aTimeLogger:
         Raises:
             `HTTPError`: If the response status code indicates an error.
         """
-        if 400 <= response.status_code < 600:
+        if 400 <= (status_code := response.status_code) < 600:
             request_info = f"{response.request.method} {response.request.url}"
             text = response.text
+
             try:
                 title = re.search(
                     r"<title>(.*)</title>", 
@@ -249,15 +248,13 @@ class aTimeLogger:
                 error_msg = f"{title}: {reasons} for {request_info}.\n{details}"
 
             except AttributeError:
-                if response.status_code < 500:
-                    error_type = "Client Error"
-                else:
-                    error_type = "Server Error"
+                error_type = "Client Error" if status_code < 500 else "Server Error"
                 try:
                     json = response.json()
-                    error_msg = f"{response.status_code} {error_type}: for {request_info}.\n{json}"
+                    error_msg = f"{status_code} {error_type}: for {request_info}.\n{json}"
+
                 except requests.exceptions.JSONDecodeError:
-                    error_msg = f"{response.status_code} {error_type}: for {request_info}.\n{text}"
+                    error_msg = f"{status_code} {error_type}: for {request_info}.\n{text}"
 
             raise requests.HTTPError(error_msg, response=response)
 
@@ -440,9 +437,10 @@ class aTimeLogger:
             **kwargs
         )
         self.check_response(response)
+        tz = self._extract_tzinfo_4decode(datetime_range)
         return self.decode_response(
             response,
-            object_hook=lambda dct: self._object_hook(dct, tz=self._extract_tzinfo_4decode(datetime_range))
+            object_hook=lambda dct: self._object_hook(dct, tz=tz)
         )
 
 
