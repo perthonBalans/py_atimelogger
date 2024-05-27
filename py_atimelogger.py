@@ -9,7 +9,8 @@ from typing import (
     Mapping,
     Callable,
     Optional,
-    TypeAlias
+    TypeAlias,
+    Literal,
 )
 
 import requests
@@ -140,7 +141,7 @@ class aTimeLogger:
         self,
         offset: int = 0,
         limit: int = 100,
-        order: str = 'desc',
+        order: Literal['desc', 'asc'] = 'desc',
         datetime_range: tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]] = (None, None),
         types: Optional[Iterable[str]] = None,
         state: Optional[str] = None,
@@ -152,7 +153,7 @@ class aTimeLogger:
         Args:
             offset (int): The offset value for pagination. Defaults to 0.
             limit (int): The limit value for pagination. Defaults to 100.
-            order (str): The order of the results. Defaults to 'desc'.
+            order (Literal['desc', 'asc']): The order of the results. Defaults to 'desc'.
             datetime_range (tuple[str | datetime | SupportsInt | None, str | datetime | SupportsInt | None]): \
                 The datetime range in which intervals are included. None means no limit. Default is (None, None).
             types (Iterable[str], optional): The type guids of the intervals to retrieve. Default is None, meaning all types.
@@ -294,7 +295,7 @@ class aTimeLogger:
     def get_types(
         self,
         guid: str = '',
-        order: str = 'desc',
+        order: Literal['desc', 'asc'] = 'desc',
         **kwargs,
     ) -> dict[str, list[records] | bool]:
         """
@@ -302,7 +303,7 @@ class aTimeLogger:
 
         Args:
             guid (str): The GUID of the type to retrieve. Default is ''.
-            order (str): The order in which the types should be sorted. Default is 'desc'.
+            order (Literal['desc', 'asc']): The order in which the types should be sorted. Default is 'desc'.
             **kwargs: Additional keyword arguments for the request.
 
         Returns:
@@ -331,7 +332,7 @@ class aTimeLogger:
         offset: int = 0,
         limit: int = LIMIT_MAX,
         state: Optional[str] = None,
-        order: str = 'desc',
+        order: Literal['desc', 'asc'] = 'desc',
         **kwargs,
     ) -> dict[str, list[records] | dict[str, str | int] | list[str] | int]:
         """
@@ -342,7 +343,7 @@ class aTimeLogger:
             limit (int): The maximum number of activities to retrieve.\
                   Default is 2147483647:=0x7FFF_FFFF (`LIMIT_MAX`).
             state (str, optional): The state of the activities to retrieve. Default is None.
-            order (str): The order in which the activities should be sorted. Default is 'desc'.
+            order (Literal['desc', 'asc']): The order in which the activities should be sorted. Default is 'desc'.
             **kwargs: Additional keyword arguments for the request.
 
         Returns:
@@ -401,7 +402,7 @@ class aTimeLogger:
         limit: int = LIMIT_MAX,
         datetime_range: tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]] = (None, None),
         types: Optional[Iterable[str]] = None,
-        order: str = 'desc',
+        order: Literal['desc', 'asc'] = 'desc',
         **kwargs,
     ) -> dict[str, list[records] | dict[str, int]]:
         """
@@ -414,7 +415,7 @@ class aTimeLogger:
             datetime_range (tuple[str | datetime | SupportsInt | None, str | datetime | SupportsInt | None]): \
                 The datetime range in which intervals are included. None means no limit. Default is (None, None).
             types (Iterable[str], optional): The type guids of the intervals to retrieve. Default is None.
-            order (str): The order in which the intervals should be sorted. Default is 'desc'.
+            order (Literal['desc', 'asc']): The order in which the intervals should be sorted. Default is 'desc'.
             **kwargs: Additional keyword arguments for the request.
 
         Returns:
@@ -449,7 +450,7 @@ def get_types(
     username: bytes | str,
     password: bytes | str,
     guid: str = '',
-    order: str = 'desc',
+    order: Literal['desc', 'asc'] = 'desc',
     **kwargs,
 ) -> dict[str, list[records] | bool]:
     """
@@ -459,7 +460,7 @@ def get_types(
         username (bytes | str): The username of aTimeLogger account.
         password (bytes | str): The password of aTimeLogger account.
         guid (str): The GUID of the type to retrieve. Default is an empty string.
-        order (str): The order in which the types should be sorted. Default is 'desc'.
+        order (Literal['desc', 'asc']): The order in which the types should be sorted. Default is 'desc'.
         **kwargs: Additional keyword arguments for the request.
 
     Returns:
@@ -480,7 +481,7 @@ def get_activities(
     offset: int = 0,
     limit: int = aTimeLogger.LIMIT_MAX,
     state: Optional[str] = None,
-    order: str = 'desc',
+    order: Literal['desc', 'asc'] = 'desc',
     **kwargs,
 ) -> dict[str, list[records] | dict[str, str | int] | list[str] | int]:
     """
@@ -493,7 +494,7 @@ def get_activities(
         limit (int): The maximum number of activities to retrieve.\
               Default is 2147483647:=0x7FFF_FFFF (`LIMIT_MAX`).
         state (str, optional): The state of the activities to retrieve. Default is None.
-        order (str): The order in which the activities should be sorted. Default is 'desc'.
+        order (Literal['desc', 'asc']): The order in which the activities should be sorted. Default is 'desc'.
         **kwargs: Additional keyword arguments for the request.
 
     Returns:
@@ -518,7 +519,7 @@ def get_intervals(
     limit: int = aTimeLogger.LIMIT_MAX,
     datetime_range: tuple[Optional[str | datetime | SupportsInt], Optional[str | datetime | SupportsInt]] = (None, None),
     types: Optional[Iterable[str]] = None,
-    order: str = 'desc',
+    order: Literal['desc', 'asc'] = 'desc',
     **kwargs,
 ) -> dict[str, list[records] | dict[str, int]]:
     """
@@ -533,7 +534,7 @@ def get_intervals(
         datetime_range (tuple[str | datetime | SupportsInt | None, str | datetime | SupportsInt | None]): \
             The datetime range in which intervals are included. None means no limit. Default is (None, None).
         types (Iterable[str], optional): The type guids of the intervals to retrieve. Default is None.
-        order (str): The order in which the intervals should be sorted. Default is 'desc'.
+        order (Literal['desc', 'asc']): The order in which the intervals should be sorted. Default is 'desc'.
         **kwargs: Additional keyword arguments for the request.
 
     Returns:
