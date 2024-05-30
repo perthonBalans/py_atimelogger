@@ -222,38 +222,37 @@ class aTimeLogger:
         Raises:
             `HTTPError`: If the response status code indicates an error.
         """
-        if 400 <= (status_code := response.status_code) < 600:
+        if 400 <= response.status_code < 600:
             request_info = f"{response.request.method} {response.request.url}"
-            text = response.text
 
             try:
                 title = re.search(
                     r"<title>(.*)</title>", 
-                    text, 
+                    response.text, 
                     re.IGNORECASE
                 ).group(1)
                 reasons_match = re.search(
                     r"<p><b>Message<\/b> (.*?)<\/p>", 
-                    text, 
+                    response.text, 
                     re.IGNORECASE
                 )
                 reasons = html.unescape(reasons_match.group(1)) if reasons_match else ''
                 details_match = re.search(
                     r"<p><b>Description<\/b> (.*?)<\/p>", 
-                    text, 
+                    response.text, 
                     re.IGNORECASE
                 )
                 details = html.unescape(details_match.group(1)) if details_match else ''
                 error_msg = f"{title}: {reasons} for {request_info}.\n{details}"
 
             except AttributeError:
-                error_type = "Client Error" if status_code < 500 else "Server Error"
+                error_type = ("Client Error" if response.status_code < 500
+                              else "Server Error")
                 try:
-                    json = response.json()
-                    error_msg = f"{status_code} {error_type}: for {request_info}.\n{json}"
+                    error_msg = (f"{response.status_code} {error_type}: for {request_info}.\n{response.json()}")
 
                 except requests.exceptions.JSONDecodeError:
-                    error_msg = f"{status_code} {error_type}: for {request_info}.\n{text}"
+                    error_msg = f"{response.status_code} {error_type}: for {request_info}.\n{response.text}"
 
             raise requests.HTTPError(error_msg, response=response)
 
